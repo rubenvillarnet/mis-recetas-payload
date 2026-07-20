@@ -1,16 +1,17 @@
-import Link from 'next/link'
 import Image from 'next/image'
 import type { Recipe } from '@/payload-types'
 import { categoryName, recipePhoto } from '@/lib/queries'
+import { OfflineLink } from './OfflineLink'
 
 export function RecipeCard({ recipe, showCategory = false }: { recipe: Recipe; showCategory?: boolean }) {
   const photo = recipePhoto(recipe, 'card')
   const initial = recipe.title.trim().charAt(0).toUpperCase()
 
   return (
-    <Link
+    <OfflineLink
       href={`/receta/${recipe.slug}`}
       className="group block overflow-hidden rounded-[18px] border border-soft-2 bg-white transition hover:-translate-y-1 hover:shadow-[0_16px_30px_rgba(45,55,48,0.12)]"
+      unavailableClassName="block overflow-hidden rounded-[18px] border border-soft-2 bg-white opacity-50"
     >
       <div className="relative aspect-[4/3] bg-[#eceee8]">
         {photo ? (
@@ -30,6 +31,6 @@ export function RecipeCard({ recipe, showCategory = false }: { recipe: Recipe; s
         )}
         <div className="font-heading text-base leading-tight font-semibold">{recipe.title}</div>
       </div>
-    </Link>
+    </OfflineLink>
   )
 }
