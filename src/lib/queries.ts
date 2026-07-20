@@ -70,13 +70,14 @@ export async function getRecipesByCategory(categoryId: number): Promise<Recipe[]
   return result.docs
 }
 
-export async function getFeaturedRecipes(limit = 4): Promise<Recipe[]> {
+export async function getFeaturedRecipes(): Promise<Recipe[]> {
   const payload = await getPayloadClient()
   const result = await payload.find({
     collection: 'recipes',
     where: { featured: { equals: true } },
+    sort: 'title',
     depth: 1,
-    limit,
+    limit: 500,
   })
   return result.docs
 }

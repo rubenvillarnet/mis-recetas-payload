@@ -4,7 +4,7 @@ import { RecipeGrid } from '@/components/RecipeGrid'
 import { getCategoriesWithCounts, getFeaturedRecipes } from '@/lib/queries'
 
 export default async function HomePage() {
-  const [categories, featured] = await Promise.all([getCategoriesWithCounts(), getFeaturedRecipes(4)])
+  const [categories, featured] = await Promise.all([getCategoriesWithCounts(), getFeaturedRecipes()])
 
   return (
     <section className="animate-fade-up">
