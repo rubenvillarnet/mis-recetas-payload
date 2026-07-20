@@ -45,12 +45,5 @@ next-env.d.ts
 # datos de origen usados solo por scripts/migrate.ts (ya migrados a Neon/R2)
 /migration-data
 
-# Playwright
-node_modules/
-/test-results/
-/playwright-report/
-/blob-report/
-/playwright/.cache/
-
 # Claude Code: config personal, no compartida
 .claude/settings.local.json
