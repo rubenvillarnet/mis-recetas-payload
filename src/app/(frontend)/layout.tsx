@@ -1,4 +1,5 @@
 import React from 'react'
+import type { Metadata } from 'next'
 import { Bitter, Mulish } from 'next/font/google'
 import { Header } from '@/components/Header'
 import { Footer } from '@/components/Footer'
@@ -7,9 +8,25 @@ import './globals.css'
 const bitter = Bitter({ subsets: ['latin'], variable: '--font-heading-family', display: 'swap' })
 const mulish = Mulish({ subsets: ['latin'], variable: '--font-body-family', display: 'swap' })
 
-export const metadata = {
-  title: 'En mi casa se cocina así',
-  description: 'Nuestro cuaderno de recetas de familia.',
+const siteName = 'En mi casa se cocina así'
+const description = 'Nuestro cuaderno de recetas de familia. Las de siempre, las que salen bien y las que apetece repetir.'
+
+export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'),
+  title: siteName,
+  description,
+  openGraph: {
+    title: siteName,
+    description,
+    siteName,
+    locale: 'es_ES',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: siteName,
+    description,
+  },
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
