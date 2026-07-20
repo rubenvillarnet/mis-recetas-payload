@@ -1,67 +1,119 @@
-# Payload Blank Template
+# En mi casa se cocina así
 
-This template comes configured with the bare minimum to get started on anything you need.
+Recetario familiar. Panel de administración con [Payload CMS](https://payloadcms.com) y frontend con [Next.js](https://nextjs.org) (App Router), en un único proyecto.
 
-## Quick start
+## Stack
 
-This template can be deployed directly from our Cloud hosting and it will setup MongoDB and cloud S3 object storage for media.
+- **Backend/admin**: Payload CMS 3.x (panel en español)
+- **Frontend**: Next.js App Router + React + Tailwind CSS v4
+- **Base de datos**: PostgreSQL, alojada en [Neon](https://neon.tech)
+- **Imágenes**: object storage compatible con S3, en [Cloudflare R2](https://developers.cloudflare.com/r2/)
+- **Despliegue**: Docker (imagen `standalone` de Next.js)
 
-## Quick Start - local setup
+## Estructura del proyecto
 
-To spin up this template locally, follow these steps:
+```
+src/
+├── collections/          # Recipes, Categories, Media, Users
+├── fields/                # slugField (slug único autogenerado)
+├── hooks/                 # generateUniqueSlug
+├── lib/                   # cliente de Payload y queries del frontend
+├── components/            # componentes del frontend
+├── payload.config.ts
+└── app/
+    ├── (payload)/          # admin + API de Payload (generado por Payload)
+    └── (frontend)/         # home, /categoria/[slug], /buscar, /receta/[slug]
 
-### Clone
+scripts/
+└── migrate.ts             # script de migración/seed (ver más abajo)
 
-After you click the `Deploy` button above, you'll want to have standalone copy of this repo on your machine. If you've already cloned this repo, skip to [Development](#development).
+migration-data/             # datos de origen para la migración (no versionado, ver más abajo)
+```
 
-### Development
+## Requisitos previos
 
-1. First [clone the repo](#clone) if you have not done so already
-2. `cd my-project && cp .env.example .env` to copy the example environment variables. You'll need to add the `MONGODB_URL` from your Cloud project to your `.env` if you want to use S3 storage and the MongoDB database that was created for you.
+- Node.js 20 o superior
+- Una base de datos Postgres (recomendado: un proyecto en [Neon.tech](https://neon.tech), tiene capa gratuita)
+- Un bucket de [Cloudflare R2](https://dash.cloudflare.com) con un token de API (Object Read & Write) y acceso público (dominio propio o `*.r2.dev`)
 
-3. `pnpm install && pnpm dev` to install dependencies and start the dev server
-4. open `http://localhost:3000` to open the app in your browser
+## Puesta en marcha local
 
-That's it! Changes made in `./src` will be reflected in your app. Follow the on-screen instructions to login and create your first admin user. Then check out [Production](#production) once you're ready to build and serve your app, and [Deployment](#deployment) when you're ready to go live.
+```bash
+npm install
+cp .env.example .env
+```
 
-#### Docker (Optional)
+Rellena `.env` con tus credenciales reales (ver [Variables de entorno](#variables-de-entorno)).
 
-If you prefer to use Docker for local development instead of a local MongoDB instance, the provided docker-compose.yml file can be used.
+```bash
+npm run dev
+```
 
-To do so, follow these steps:
+Abre `http://localhost:3000`. La primera vez, entra en `http://localhost:3000/admin` y crea tu usuario administrador desde el propio navegador (Payload lo pide automáticamente cuando la colección de usuarios está vacía).
 
-- Modify the `MONGODB_URL` in your `.env` file to `mongodb://127.0.0.1/<dbname>`
-- Modify the `docker-compose.yml` file's `MONGODB_URL` to match the above `<dbname>`
-- Run `docker-compose up` to start the database, optionally pass `-d` to run in the background.
+## Variables de entorno
 
-## How it works
+| Variable | Descripción |
+|---|---|
+| `PAYLOAD_SECRET` | Clave secreta de Payload (cualquier cadena aleatoria larga) |
+| `DATABASE_URL` | Cadena de conexión de Postgres (Neon) |
+| `S3_BUCKET` | Nombre del bucket de R2 |
+| `S3_ENDPOINT` | Endpoint de R2, `https://<account_id>.r2.cloudflarestorage.com` |
+| `S3_REGION` | `auto` para R2 |
+| `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | Credenciales del token de API de R2 |
+| `S3_PUBLIC_HOSTNAME` | Dominio público del bucket (propio o `*.r2.dev`) |
+| `NEXT_PUBLIC_SERVER_URL` | URL pública del sitio (`http://localhost:3000` en local) |
 
-The Payload config is tailored specifically to the needs of most websites. It is pre-configured in the following ways:
+Ver [.env.example](.env.example) para la plantilla completa.
 
-### Collections
+## Scripts disponibles
 
-See the [Collections](https://payloadcms.com/docs/configuration/collections) docs for details on how to extend this functionality.
+| Comando | Qué hace |
+|---|---|
+| `npm run dev` | Servidor de desarrollo |
+| `npm run devsafe` | Igual que `dev`, pero borrando antes la caché `.next` |
+| `npm run build` | Build de producción (necesita `DATABASE_URL` accesible: genera las páginas de recetas/categorías de forma estática) |
+| `npm run start` | Sirve el build de producción |
+| `npm run generate:types` | Regenera `src/payload-types.ts` a partir de las colecciones |
+| `npm run generate:importmap` | Regenera el *import map* del admin (necesario tras añadir/quitar colecciones o componentes custom) |
+| `npm run migrate:seed` | Ejecuta el script de migración de datos (ver abajo) |
+| `npm run lint` | ESLint |
 
-- #### Users (Authentication)
+## Migración de datos de origen
 
-  Users are auth-enabled collections that have access to the admin panel.
+El contenido original (JSON + fotos de la web estática previa) vive en `migration-data/` (`data/*.json` + `images/*`), una carpeta **no versionada** en git — se conserva solo en local por si hace falta re-ejecutar la migración.
 
-  For additional help, see the official [Auth Example](https://github.com/payloadcms/payload/tree/3.x/examples/auth) or the [Authentication](https://payloadcms.com/docs/authentication/overview#authentication-overview) docs.
+`scripts/migrate.ts` lee esos ficheros, crea las categorías, sube las imágenes a R2 y crea las recetas en Postgres. Es idempotente (se puede volver a ejecutar sin duplicar nada) y soporta modo simulación:
 
-- #### Media
+```bash
+DRY_RUN=true npm run migrate:seed   # solo informa, no escribe nada
+npm run migrate:seed                # migración real
+```
 
-  This is the uploads enabled collection. It features pre-configured sizes, focal point and manual resizing to help you manage your pictures.
+## Colecciones del admin
 
-### Docker
+- **Recetas** — título, categoría, ingredientes, pasos, foto, nota de la cocina, y un checkbox "Destacada" para la sección "Para hoy mismo" de la home.
+- **Categorías** — nombre, icono, orden de aparición. Se pueden añadir/editar sin tocar código.
+- **Imágenes** — fotos de las recetas (alojadas en R2, con tamaños derivados: thumbnail/card/hero).
+- **Usuarios** — acceso al panel de admin. El primer usuario se crea desde `/admin` la primera vez; a partir de ahí, solo un usuario ya registrado puede dar de alta a los demás.
 
-Alternatively, you can use [Docker](https://www.docker.com) to spin up this template locally. To do so, follow these steps:
+## Despliegue con Docker
 
-1. Follow [steps 1 and 2 from above](#development), the docker-compose file will automatically use the `.env` file in your project root
-1. Next run `docker-compose up`
-1. Follow [steps 4 and 5 from above](#development) to login and create your first admin user
+El build de Next.js genera las páginas de recetas de forma estática, así que necesita conectividad real a Postgres (y a R2) **en tiempo de build**, no solo en runtime:
 
-That's it! The Docker instance will help you get up and running quickly while also standardizing the development environment across your teams.
+```bash
+docker build \
+  --build-arg DATABASE_URL="postgresql://..." \
+  --build-arg PAYLOAD_SECRET="..." \
+  --build-arg S3_BUCKET="..." \
+  --build-arg S3_ENDPOINT="..." \
+  --build-arg S3_REGION="auto" \
+  --build-arg S3_ACCESS_KEY_ID="..." \
+  --build-arg S3_SECRET_ACCESS_KEY="..." \
+  --build-arg S3_PUBLIC_HOSTNAME="..." \
+  -t mis-recetas-payload .
 
-## Questions
+docker run -d -p 3000:3000 --env-file .env mis-recetas-payload
+```
 
-If you have any issues or questions, reach out to us on [Discord](https://discord.com/invite/payload) or start a [GitHub discussion](https://github.com/payloadcms/payload/discussions).
+`docker-compose.yml` hace lo mismo leyendo las variables de un `.env` en la raíz (`docker compose up -d --build`).
