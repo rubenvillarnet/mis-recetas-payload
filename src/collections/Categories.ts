@@ -16,6 +16,7 @@ export const Categories: CollectionConfig = {
   admin: {
     useAsTitle: 'name',
     defaultColumns: ['name', 'slug', 'order'],
+    preview: (doc) => (typeof doc?.slug === 'string' ? `/categoria/${doc.slug}` : null),
   },
   access: {
     read: () => true,

@@ -17,6 +17,7 @@ export const Recipes: CollectionConfig = {
   admin: {
     useAsTitle: 'title',
     defaultColumns: ['title', 'category', 'featured'],
+    preview: (doc) => (typeof doc?.slug === 'string' ? `/receta/${doc.slug}` : null),
   },
   access: {
     read: () => true,
