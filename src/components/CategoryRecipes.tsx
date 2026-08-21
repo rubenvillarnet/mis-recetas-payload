@@ -1,12 +1,28 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useSyncExternalStore } from 'react'
 import type { Recipe } from '@/payload-types'
 import { RecipeCard } from './RecipeCard'
 
 type View = 'grid' | 'list'
 
 const STORAGE_KEY = 'recetario:vista'
+// `storage` solo avisa a las *otras* pestañas, así que la propia se entera por
+// este evento; de paso, las demás pestañas se ponen al día solas.
+const VIEW_EVENT = 'recetario:vista-cambiada'
+
+function subscribe(onChange: () => void) {
+  window.addEventListener('storage', onChange)
+  window.addEventListener(VIEW_EVENT, onChange)
+  return () => {
+    window.removeEventListener('storage', onChange)
+    window.removeEventListener(VIEW_EVENT, onChange)
+  }
+}
+
+function readView(): View {
+  return localStorage.getItem(STORAGE_KEY) === 'list' ? 'list' : 'grid'
+}
 
 function ViewButton({
   active,
@@ -36,16 +52,11 @@ function ViewButton({
 }
 
 export function CategoryRecipes({ recipes }: { recipes: Recipe[] }) {
-  const [view, setView] = useState<View>('grid')
-
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored === 'grid' || stored === 'list') setView(stored)
-  }, [])
+  const view = useSyncExternalStore(subscribe, readView, (): View => 'grid')
 
   const changeView = (next: View) => {
-    setView(next)
     localStorage.setItem(STORAGE_KEY, next)
+    window.dispatchEvent(new Event(VIEW_EVENT))
   }
 
   return (
