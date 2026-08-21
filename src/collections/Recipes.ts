@@ -1,5 +1,12 @@
 import type { CollectionConfig } from 'payload'
+import { revalidatePath } from 'next/cache'
 import { slugField } from '../fields/slugField'
+
+const revalidateRecipePaths = (slug?: string | null) => {
+  if (slug) revalidatePath(`/receta/${slug}`)
+  revalidatePath('/categoria/[slug]', 'page')
+  revalidatePath('/')
+}
 
 export const Recipes: CollectionConfig = {
   slug: 'recipes',
@@ -13,6 +20,10 @@ export const Recipes: CollectionConfig = {
   },
   access: {
     read: () => true,
+  },
+  hooks: {
+    afterChange: [({ doc }) => revalidateRecipePaths(doc.slug)],
+    afterDelete: [({ doc }) => revalidateRecipePaths(doc.slug)],
   },
   fields: [
     { name: 'title', type: 'text', label: 'Título', required: true },

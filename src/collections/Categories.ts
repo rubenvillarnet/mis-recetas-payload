@@ -1,5 +1,11 @@
 import type { CollectionConfig } from 'payload'
+import { revalidatePath } from 'next/cache'
 import { slugField } from '../fields/slugField'
+
+const revalidateCategoryPaths = (slug?: string | null) => {
+  if (slug) revalidatePath(`/categoria/${slug}`)
+  revalidatePath('/', 'layout')
+}
 
 export const Categories: CollectionConfig = {
   slug: 'categories',
@@ -13,6 +19,10 @@ export const Categories: CollectionConfig = {
   },
   access: {
     read: () => true,
+  },
+  hooks: {
+    afterChange: [({ doc }) => revalidateCategoryPaths(doc.slug)],
+    afterDelete: [({ doc }) => revalidateCategoryPaths(doc.slug)],
   },
   fields: [
     { name: 'name', type: 'text', label: 'Nombre', required: true, unique: true },
