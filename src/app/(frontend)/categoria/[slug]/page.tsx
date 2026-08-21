@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { Breadcrumb } from '@/components/Breadcrumb'
 import { CategoryRecipes } from '@/components/CategoryRecipes'
+import { SearchBox } from '@/components/SearchBox'
 import { getAllCategories, getCategoryBySlug, getRecipesByCategory } from '@/lib/queries'
 
 export const revalidate = 3600
@@ -27,6 +28,9 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
   return (
     <section className="animate-fade-up pt-8.5">
       <Breadcrumb items={[{ label: 'Inicio', href: '/' }, { label: category.name }]} />
+      <div className="mb-6.5">
+        <SearchBox />
+      </div>
       <div className="mb-6.5 flex items-end justify-between gap-5 border-b border-soft pb-5.5">
         <h1 className="font-heading m-0 text-4xl font-bold">{category.name}</h1>
         <span className="pb-1.5 text-[15px] font-bold whitespace-nowrap text-muted">
