@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { Breadcrumb } from '@/components/Breadcrumb'
-import { RecipeGrid } from '@/components/RecipeGrid'
+import { CategoryRecipes } from '@/components/CategoryRecipes'
 import { getAllCategories, getCategoryBySlug, getRecipesByCategory } from '@/lib/queries'
 
 export const revalidate = 3600
@@ -33,7 +33,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
           {recipes.length} recetas
         </span>
       </div>
-      <RecipeGrid recipes={recipes} />
+      <CategoryRecipes recipes={recipes} />
     </section>
   )
 }

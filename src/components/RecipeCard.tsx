@@ -1,11 +1,47 @@
 import Image from 'next/image'
 import type { Recipe } from '@/payload-types'
-import { categoryName, recipePhoto } from '@/lib/queries'
+import { categoryName, recipePhoto } from '@/lib/recipe-presenters'
 import { OfflineLink } from './OfflineLink'
 
-export function RecipeCard({ recipe, showCategory = false }: { recipe: Recipe; showCategory?: boolean }) {
+export function RecipeCard({
+  recipe,
+  showCategory = false,
+  layout = 'grid',
+}: {
+  recipe: Recipe
+  showCategory?: boolean
+  layout?: 'grid' | 'list'
+}) {
   const photo = recipePhoto(recipe, 'card')
   const initial = recipe.title.trim().charAt(0).toUpperCase()
+
+  if (layout === 'list') {
+    return (
+      <OfflineLink
+        href={`/receta/${recipe.slug}`}
+        className="group flex items-center gap-4 overflow-hidden rounded-[16px] border border-soft-2 bg-white p-2.5 transition hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(45,55,48,0.1)]"
+        unavailableClassName="flex items-center gap-4 overflow-hidden rounded-[16px] border border-soft-2 bg-white p-2.5 opacity-50"
+      >
+        <div className="relative h-[68px] w-[68px] shrink-0 overflow-hidden rounded-[11px] bg-[#eceee8]">
+          {photo ? (
+            <Image src={photo} alt={recipe.title} fill sizes="68px" className="object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              <span className="font-heading text-lg font-bold text-[#b6bab0]">{initial}</span>
+            </div>
+          )}
+        </div>
+        <div className="min-w-0">
+          {showCategory && (
+            <div className="mb-0.5 text-[11px] font-extrabold uppercase tracking-wider text-accent">
+              {categoryName(recipe.category)}
+            </div>
+          )}
+          <div className="font-heading truncate text-base leading-tight font-semibold">{recipe.title}</div>
+        </div>
+      </OfflineLink>
+    )
+  }
 
   return (
     <OfflineLink
