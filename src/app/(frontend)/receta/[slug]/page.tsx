@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -5,7 +6,15 @@ import { Breadcrumb } from '@/components/Breadcrumb'
 import { IngredientsSidebar } from '@/components/IngredientsSidebar'
 import { StepsList } from '@/components/StepsList'
 import { FootnoteBox } from '@/components/FootnoteBox'
-import { getRecipeBySlug, categoryName, categorySlug, recipePhoto } from '@/lib/queries'
+import { ShareButton } from '@/components/ShareButton'
+import {
+  getRecipeBySlug,
+  categoryName,
+  categorySlug,
+  recipePhoto,
+  recipeOgImage,
+  recipeSummary,
+} from '@/lib/queries'
 import { getPayloadClient } from '@/lib/payload'
 
 export const revalidate = 3600
@@ -16,11 +25,38 @@ export async function generateStaticParams() {
   return docs.map((recipe) => ({ slug: recipe.slug || '' })).filter((p) => p.slug)
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
   const recipe = await getRecipeBySlug(slug)
   if (!recipe) return {}
-  return { title: `${recipe.title} — En mi casa se cocina así` }
+
+  const title = `${recipe.title} — En mi casa se cocina así`
+  const description = recipeSummary(recipe)
+  const image = recipeOgImage(recipe)
+  const url = `/receta/${recipe.slug}`
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      type: 'article',
+      title: recipe.title,
+      description,
+      url,
+      // Sobrescribir openGraph reemplaza el objeto del layout, así que se repiten aquí.
+      siteName: 'En mi casa se cocina así',
+      locale: 'es_ES',
+      // Sin `images` entra en juego el opengraph-image.tsx de este segmento.
+      ...(image ? { images: [image] } : {}),
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: recipe.title,
+      description,
+      ...(image ? { images: [image] } : {}),
+    },
+  }
 }
 
 export default async function RecipePage({ params }: { params: Promise<{ slug: string }> }) {
@@ -42,7 +78,10 @@ export default async function RecipePage({ params }: { params: Promise<{ slug: s
         ]}
       />
 
-      <div className="mb-2.5 text-xs font-extrabold tracking-wider text-accent uppercase">{catName}</div>
+      <div className="mb-2.5 flex items-center justify-between gap-4">
+        <span className="text-xs font-extrabold tracking-wider text-accent uppercase">{catName}</span>
+        <ShareButton title={recipe.title} text={`Receta de ${recipe.title} en «En mi casa se cocina así»`} />
+      </div>
       <h1 className="font-heading mb-6 text-[32px] leading-tight font-bold text-balance nav:text-[44px]">
         {recipe.title}
       </h1>

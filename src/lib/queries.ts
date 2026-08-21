@@ -108,3 +108,32 @@ export async function getRecipeBySlug(slug: string): Promise<Recipe | null> {
   })
   return result.docs[0] ?? null
 }
+
+export type RecipeOgImage = { url: string; width?: number; height?: number; alt: string }
+
+export function recipeOgImage(recipe: Pick<Recipe, 'image' | 'title'>): RecipeOgImage | null {
+  if (!recipe.image || typeof recipe.image !== 'object') return null
+  const media = recipe.image as Media
+  const hero = media.sizes?.hero
+  const url = hero?.url ?? media.url
+  if (!url) return null
+  return {
+    url,
+    width: hero?.width ?? media.width ?? undefined,
+    height: hero?.height ?? media.height ?? undefined,
+    alt: media.alt || recipe.title,
+  }
+}
+
+export function recipeSummary(recipe: Pick<Recipe, 'ingredients' | 'ingredientsLabel'>, max = 180): string {
+  const items = (recipe.ingredients ?? [])
+    .map((ingredient) => ingredient.text?.trim())
+    .filter((text): text is string => Boolean(text))
+  const label = recipe.ingredientsLabel?.trim()
+  const parts: string[] = []
+  if (label) parts.push(label.replace(/[.\s]+$/, '') + '.')
+  if (items.length) parts.push(`Ingredientes: ${items.join(', ')}.`)
+  const summary = parts.join(' ')
+  if (summary.length <= max) return summary
+  return summary.slice(0, summary.lastIndexOf(' ', max - 1)).replace(/[,.\s]+$/, '') + '…'
+}

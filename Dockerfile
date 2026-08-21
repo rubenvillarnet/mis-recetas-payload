@@ -27,6 +27,11 @@ ARG S3_REGION
 ARG S3_ACCESS_KEY_ID
 ARG S3_SECRET_ACCESS_KEY
 ARG S3_PUBLIC_HOSTNAME
+# Las NEXT_PUBLIC_* se incrustan al compilar y las páginas de receta se
+# prerenderizan aquí, así que el dominio real tiene que estar en el build:
+# pasarla solo en runtime deja las URLs absolutas (og:image, canonical)
+# apuntando al fallback localhost.
+ARG NEXT_PUBLIC_SERVER_URL
 ENV DATABASE_URL=$DATABASE_URL \
   PAYLOAD_SECRET=$PAYLOAD_SECRET \
   S3_BUCKET=$S3_BUCKET \
@@ -35,6 +40,7 @@ ENV DATABASE_URL=$DATABASE_URL \
   S3_ACCESS_KEY_ID=$S3_ACCESS_KEY_ID \
   S3_SECRET_ACCESS_KEY=$S3_SECRET_ACCESS_KEY \
   S3_PUBLIC_HOSTNAME=$S3_PUBLIC_HOSTNAME \
+  NEXT_PUBLIC_SERVER_URL=$NEXT_PUBLIC_SERVER_URL \
   NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
