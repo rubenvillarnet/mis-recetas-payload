@@ -1,11 +1,11 @@
 import type { CollectionConfig } from 'payload'
-import { revalidatePath } from 'next/cache'
+import { safeRevalidatePath } from '../hooks/safeRevalidatePath'
 import { slugField } from '../fields/slugField'
 
 const revalidateRecipePaths = (slug?: string | null) => {
-  if (slug) revalidatePath(`/receta/${slug}`)
-  revalidatePath('/categoria/[slug]', 'page')
-  revalidatePath('/')
+  if (slug) safeRevalidatePath(`/receta/${slug}`)
+  safeRevalidatePath('/categoria/[slug]', 'page')
+  safeRevalidatePath('/')
 }
 
 export const Recipes: CollectionConfig = {
