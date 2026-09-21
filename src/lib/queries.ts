@@ -1,4 +1,5 @@
 import { getPayloadClient } from './payload'
+import { recipeSearchWhere } from './recipe-search'
 import type { Category, Recipe } from '@/payload-types'
 
 export {
@@ -76,9 +77,7 @@ export async function searchRecipes(q: string): Promise<Recipe[]> {
   const payload = await getPayloadClient()
   const result = await payload.find({
     collection: 'recipes',
-    where: {
-      or: [{ title: { like: query } }, { 'ingredients.text': { like: query } }],
-    },
+    where: recipeSearchWhere(query),
     depth: 1,
     limit: 100,
     sort: 'title',

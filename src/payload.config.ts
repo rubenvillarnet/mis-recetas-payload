@@ -12,6 +12,7 @@ import { Users } from './collections/Users'
 import { Media } from './collections/Media'
 import { Categories } from './collections/Categories'
 import { Recipes } from './collections/Recipes'
+import { recipesMcp } from './mcp/plugin'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -53,5 +54,6 @@ export default buildConfig({
         forcePathStyle: true,
       },
     }),
+    recipesMcp,
   ],
 })

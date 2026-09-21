@@ -18,6 +18,7 @@ src/
 ├── fields/                # slugField (slug único autogenerado)
 ├── hooks/                 # generateUniqueSlug
 ├── lib/                   # cliente de Payload y queries del frontend
+├── mcp/                   # servidor MCP: plugin y tools personalizadas
 ├── components/            # componentes del frontend
 ├── payload.config.ts
 └── app/
@@ -96,6 +97,64 @@ npm run migrate:seed                # migración real
 - **Categorías** — nombre, icono, orden de aparición. Se pueden añadir/editar sin tocar código.
 - **Imágenes** — fotos de las recetas (alojadas en R2, con tamaños derivados: thumbnail/card/hero).
 - **Usuarios** — acceso al panel de admin. El primer usuario se crea desde `/admin` la primera vez; a partir de ahí, solo un usuario ya registrado puede dar de alta a los demás.
+- **API Keys (grupo MCP)** — claves para que un agente de IA use el [servidor MCP](#servidor-mcp-agentes-de-ia). Cada clave va ligada a un usuario y tiene un checkbox por operación y por tool.
+
+## Servidor MCP (agentes de IA)
+
+El proyecto expone un servidor [MCP](https://modelcontextprotocol.io) (Streamable HTTP) en `POST /api/mcp`, montado con el plugin oficial [`@payloadcms/plugin-mcp`](https://payloadcms.com/docs/plugins/mcp), para que un agente (Claude Code, Codex, Hermes…) pueda consultar el recetario y dar de alta o corregir recetas. La configuración vive en `src/mcp/plugin.ts` y las tools propias en `src/mcp/tools.ts`.
+
+### Herramientas disponibles
+
+| Tool | Qué hace |
+|---|---|
+| `searchRecipes` | Busca por título o ingrediente (la misma búsqueda que `/buscar`) y devuelve un resumen de cada receta |
+| `findRecipes` | Consulta recetas con `where`/`sort`/`limit` (sintaxis de Payload) o una receta completa por `id` |
+| `createRecipes` / `updateRecipes` | Crea o edita recetas. El slug se genera solo; la categoría va por `id` y la foto por `id` de media |
+| `findCategories` | Lista las categorías (para obtener el `id` que necesita una receta) |
+| `findMedia` | Lista las fotos ya subidas |
+| `uploadRecipePhoto` | Descarga una imagen desde una URL pública, la sube a R2 como media y, si se indica `recipeId`, la asigna a esa receta |
+
+Borrar recetas queda fuera del servidor MCP a propósito: solo se puede hacer desde el admin.
+
+### Crear una API key
+
+1. En el admin, **MCP → API Keys → Crear nuevo**.
+2. Elige el usuario al que se asocia (las operaciones se ejecutan como ese usuario), ponle una etiqueta y marca qué operaciones y tools puede usar esa clave. Se pueden cambiar en cualquier momento; el servidor lo aplica en la siguiente petición.
+3. Pulsa **Generar nueva clave API** en la barra lateral, guarda y copia la clave. Solo se ve desde el admin.
+
+Toda petición sin cabecera `Authorization: Bearer <clave>` válida recibe un `401`.
+
+### Conectar un cliente
+
+Guarda la clave en una variable de entorno (por ejemplo `RECETAS_MCP_KEY`) y sustituye `http://localhost:3000` por el dominio real si conectas con producción.
+
+**Claude Code**
+
+```bash
+claude mcp add --transport http recetas http://localhost:3000/api/mcp --header "Authorization: Bearer $RECETAS_MCP_KEY"
+```
+
+**Codex** (`~/.codex/config.toml`)
+
+```toml
+[mcp_servers.recetas]
+url = "http://localhost:3000/api/mcp"
+bearer_token_env_var = "RECETAS_MCP_KEY"
+```
+
+**Hermes** (`~/.hermes/config.yaml`, con `RECETAS_MCP_KEY` definida en `~/.hermes/.env`)
+
+```yaml
+mcp_servers:
+  recetas:
+    url: "http://localhost:3000/api/mcp"
+    headers:
+      Authorization: "Bearer ${RECETAS_MCP_KEY}"
+```
+
+### Base de datos
+
+El plugin añade la tabla `payload_mcp_api_keys`. En desarrollo se crea sola al arrancar `npm run dev` (el adaptador de Postgres sincroniza el esquema); en producción no hay sincronización automática, así que si la base de datos de producción no es la misma que la de desarrollo hay que crearla antes de desplegar (arrancando `dev` contra ella una vez o generando una migración con `npm run payload -- migrate:create`).
 
 ## Despliegue con Docker
 
