@@ -14,8 +14,12 @@ const text = (value: string) => ({ content: [{ type: 'text' as const, text: valu
 const errorText = (prefix: string, error: unknown) =>
   text(`❌ ${prefix}: ${error instanceof Error ? error.message : String(error)}`)
 
+// NEXT_PUBLIC_SERVER_URL puede venir con barra final (en producción la tiene),
+// así que se normaliza para no generar URLs con doble barra.
 const publicUrl = (path: string | null) =>
-  path && path.startsWith('/') ? `${process.env.NEXT_PUBLIC_SERVER_URL || ''}${path}` : path
+  path && path.startsWith('/')
+    ? `${(process.env.NEXT_PUBLIC_SERVER_URL || '').replace(/\/+$/, '')}${path}`
+    : path
 
 /**
  * Búsqueda por título o ingrediente, la misma que usa /buscar. Devuelve un
