@@ -126,19 +126,19 @@ Toda petición sin cabecera `Authorization: Bearer <clave>` válida recibe un `4
 
 ### Conectar un cliente
 
-Guarda la clave en una variable de entorno (por ejemplo `RECETAS_MCP_KEY`) y sustituye `http://localhost:3000` por el dominio real si conectas con producción.
+Los ejemplos apuntan a producción (`https://misrecetas.pixelinlove.net/api/mcp`); para trabajar contra el servidor de desarrollo, cambia esa URL por `http://localhost:3000/api/mcp` y usa una clave creada en el admin local (las claves son distintas en cada base de datos). Guarda la clave en una variable de entorno, por ejemplo `RECETAS_MCP_KEY`.
 
 **Claude Code**
 
 ```bash
-claude mcp add --transport http recetas http://localhost:3000/api/mcp --header "Authorization: Bearer $RECETAS_MCP_KEY"
+claude mcp add --transport http recetas https://misrecetas.pixelinlove.net/api/mcp --header "Authorization: Bearer $RECETAS_MCP_KEY"
 ```
 
 **Codex** (`~/.codex/config.toml`)
 
 ```toml
 [mcp_servers.recetas]
-url = "http://localhost:3000/api/mcp"
+url = "https://misrecetas.pixelinlove.net/api/mcp"
 bearer_token_env_var = "RECETAS_MCP_KEY"
 ```
 
@@ -147,14 +147,16 @@ bearer_token_env_var = "RECETAS_MCP_KEY"
 ```yaml
 mcp_servers:
   recetas:
-    url: "http://localhost:3000/api/mcp"
+    url: "https://misrecetas.pixelinlove.net/api/mcp"
     headers:
       Authorization: "Bearer ${RECETAS_MCP_KEY}"
 ```
 
 ### Base de datos
 
-El plugin añade la tabla `payload_mcp_api_keys`. En desarrollo se crea sola al arrancar `npm run dev` (el adaptador de Postgres sincroniza el esquema); en producción no hay sincronización automática, así que si la base de datos de producción no es la misma que la de desarrollo hay que crearla antes de desplegar (arrancando `dev` contra ella una vez o generando una migración con `npm run payload -- migrate:create`).
+El plugin añade la tabla `payload_mcp_api_keys` y una columna `payload_mcp_api_keys_id` en `payload_locked_documents_rels` y `payload_preferences_rels`. En desarrollo se crean solas al arrancar `npm run dev` (el adaptador de Postgres sincroniza el esquema); en producción no hay sincronización automática.
+
+Para aplicarlo a una base de datos de producción tienes [docs/mcp-schema.sql](docs/mcp-schema.sql), que se puede ejecutar tal cual con `psql` (es idempotente) sin necesidad de exponer la base de datos. El procedimiento completo está en [docs/despliegue-mcp-coolify.md](docs/despliegue-mcp-coolify.md).
 
 ## Despliegue con Docker
 

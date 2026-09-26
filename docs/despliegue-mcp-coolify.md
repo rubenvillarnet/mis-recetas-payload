@@ -19,58 +19,61 @@ Aplicar el esquema antes es inocuo para la app que está desplegada: los cambios
 
 ## Pasos
 
-### 1. Acceso a la base de datos de Coolify desde tu máquina
+### 1. Aplicar el esquema a la base de datos de producción
 
-Una de estas dos opciones:
+La forma más directa, y la que no expone la base de datos a Internet: ejecutar [mcp-schema.sql](mcp-schema.sql) con `psql` desde dentro del propio contenedor.
 
-- En Coolify, en el recurso de PostgreSQL, activa temporalmente **Make it publicly available** (publica un puerto en la IP del servidor).
-- Túnel SSH al servidor, si el puerto de Postgres ya está publicado solo en `localhost` del host:
+En Coolify, en el recurso de PostgreSQL, abre **Terminal** (panel lateral, sección *Observe & troubleshoot*) y lanza `psql` con los datos de la sección **Credentials** (usuario, base de datos y contraseña):
 
-  ```bash
-  ssh -N -L 5433:127.0.0.1:<puerto_postgres_en_el_servidor> usuario@tu-servidor
-  ```
+```bash
+psql -U <usuario> -d <basededatos>
+```
 
-### 2. Aplicar el esquema arrancando el proyecto en local contra esa base de datos
+Pega dentro el contenido de `mcp-schema.sql`. El script es idempotente: crea la tabla `payload_mcp_api_keys`, añade la columna `payload_mcp_api_keys_id` a `payload_locked_documents_rels` y `payload_preferences_rels`, y se puede ejecutar varias veces sin efectos adicionales. Termina en `COMMIT`.
 
-Solo se sobreescribe `DATABASE_URL`; el resto de variables sigue saliendo de tu `.env`:
+### 2. Alternativa: sincronizar el esquema desde local
+
+Si prefieres que sea Payload quien genere el esquema, necesitas acceso a la base de datos desde tu máquina:
+
+- En Coolify, en **Public access**, pon `Public through TCP proxy` y guarda. Si el ajuste vuelve a `Private` al recargar, el puerto elegido está ocupado en el host: prueba con otro (5433, por ejemplo).
+- O abre un túnel SSH al servidor.
+
+Con acceso, arranca el proyecto en local apuntando a esa base (solo se sobreescribe `DATABASE_URL`; el resto de variables sale de tu `.env`):
 
 ```bash
 DATABASE_URL="postgresql://usuario:pass@127.0.0.1:5433/nombre_bd" npm run dev
 ```
 
-Espera a ver `✓ Pulling schema from database...` en la consola y a que cargue la home; luego `Ctrl+C`.
+Espera a ver `✓ Pulling schema from database...`, corta con `Ctrl+C` y **vuelve a dejar el acceso en `Private`**. Mientras esté público, la base está escuchando en Internet y solo la protege la contraseña.
 
-Comprobación opcional: con el servidor arrancado, abre `http://localhost:3000/admin`. En la barra lateral debe aparecer el grupo **MCP → API Keys**, leyendo ya de la base de datos de producción.
-
-Como el cambio es solo aditivo, drizzle no pide confirmación de pérdida de datos.
-
-### 3. Cerrar el acceso
-
-Desactiva **Make it publicly available** o cierra el túnel SSH.
-
-### 4. Desplegar
+### 3. Desplegar
 
 ```bash
 git push origin main
 ```
 
-Coolify construye y despliega como siempre. No hacen falta variables de entorno nuevas (el servidor MCP no usa Redis: SSE está desactivado por defecto).
+Coolify construye y despliega como siempre. Si no se dispara solo, revisa en la aplicación la sección **Deployments** y la configuración de *Automatic Deployment* / el webhook de GitHub, o lanza un **Redeploy** manual. No hacen falta variables de entorno nuevas (el servidor MCP no usa Redis: SSE está desactivado por defecto).
 
-### 5. En producción
+### 4. Comprobar
+
+Una llamada con una clave inventada distingue si el esquema está aplicado:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" -X POST https://tu-dominio/api/mcp -H "Authorization: Bearer loquesea"
+```
+
+- `500` → falta el esquema.
+- `401` → el esquema está aplicado y el servidor rechaza la clave inválida, que es lo correcto.
+
+### 5. Crear la API key
 
 1. Entra en `https://tu-dominio/admin` → **MCP → API Keys** y crea la clave real: usuario asociado, permisos y **Generar nueva clave API**. Las claves creadas en local no sirven: viven en la otra base de datos.
-2. Comprueba que el endpoint responde:
+   Al guardar, vuelve a abrir la clave y confirma que los checkboxes siguen marcados: a veces no se guardan a la primera.
 
-   ```bash
-   curl -s -o /dev/null -w "%{http_code}\n" -X POST https://tu-dominio/api/mcp
-   ```
-
-   Debe devolver `401` (el servidor está vivo, pero falta la clave).
-
-3. Conecta el cliente apuntando a `https://tu-dominio/api/mcp` con la clave nueva (ver la sección "Servidor MCP" del [README](../README.md#servidor-mcp-agentes-de-ia)).
+2. Conecta el cliente apuntando a `https://tu-dominio/api/mcp` con la clave nueva (ver la sección "Servidor MCP" del [README](../README.md#servidor-mcp-agentes-de-ia)).
 
 ## Para el futuro
 
 Esto mismo volverá a pasar con cualquier cambio de colecciones. La solución "de libro" es pasar a migraciones: `payload migrate:create` en local y `payload migrate` al arrancar el contenedor, con `prodMigrations` en `payload.config.ts`.
 
-Pega inicial: ambas bases de datos están marcadas como "creadas por push" (fila `dev`, batch `-1`, en `payload_migrations`), así que primero habría que sentar una migración base sin ejecutarla. Hasta entonces, el paso 2 de esta guía es suficiente.
+Pega inicial: ambas bases de datos están marcadas como "creadas por push" (fila `dev`, batch `-1`, en `payload_migrations`), así que primero habría que sentar una migración base sin ejecutarla. Hasta entonces, el paso 1 de esta guía es suficiente.
